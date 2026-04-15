@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face ID Kiosk — Live Update</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050608;
+            --primary: #00ff88;
+            --secondary: #00b8ff;
+            --text-main: #ffffff;
+            --text-muted: #667085;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .bg-glow {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(0, 255, 136, 0.05) 0%, transparent 70%),
+                radial-gradient(circle at 0% 0%, rgba(0, 184, 255, 0.05) 0%, transparent 50%);
+            z-index: 0;
+            animation: pulseBg 8s infinite alternate;
+        }
+
+        @keyframes pulseBg {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            width: 90%;
+            max-width: 1000px;
+        }
+
+        .student-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(30px);
+            border: 2px solid rgba(0, 255, 136, 0.2);
+            border-radius: 50px;
+            padding: 100px 50px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5), 0 0 50px rgba(0, 255, 136, 0.1);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: scale(0.9) translateY(20px);
+            opacity: 0;
+        }
+
+        .student-card.active {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            border-color: rgba(0, 255, 136, 0.6);
+        }
+
+        .avatar-circle {
+            width: 180px;
+            height: 180px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            margin: 0 auto 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            font-weight: 900;
+            color: #000;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.4);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .name {
+            font-size: 96px;
+            font-weight: 900;
+            margin: 0;
+            background: linear-gradient(to bottom, #fff 30%, #a2a2a2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            letter-spacing: -3px;
+        }
+
+        .id-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 30px;
+            border-radius: 100px;
+            font-size: 32px;
+            font-weight: 600;
+            margin-top: 30px;
+            color: var(--primary);
+        }
+
+        .timestamp {
+            font-size: 24px;
+            color: var(--text-muted);
+            margin-top: 40px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .waiting-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .loader {
+            width: 100px;
+            height: 100px;
+            border: 4px solid rgba(255,255,255,0.05);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .waiting-text {
+            font-size: 40px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .exit-link {
+            position: fixed;
+            top: 40px;
+            right: 40px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 15px 25px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .exit-link:hover {
+            color: #fff;
+            background: rgba(255, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+    <a href="/" class="exit-link">Chiqish</a>
+
+    <div class="content" id="kioskApp">
+        <div class="waiting-state">
+            <div class="loader"></div>
+            <p class="waiting-text">Terminal kutilmoqda...</p>
+        </div>
+    </div>
+
+    <script>
+        let lastId = "";
+        let lastTime = "";
+        
+        async function checkUpdate() {
+            try {
+                const res = await fetch('/api/last_student');
+                if(!res.ok) return;
+                
+                const data = await res.json();
+                if(data && data.ID) {
+                    // Update if ID or time changed
+                    if(data.ID !== lastId || data.time !== lastTime) {
+                        lastId = data.ID;
+                        lastTime = data.time;
+                        renderStudent(data);
+                    }
+                }
+            } catch(e) {
+                console.error("Connection lost");
+            }
+        }
+
+        function renderStudent(student) {
+            const initials = student.Ism ? student.Ism.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : "??";
+            
+            const app = document.getElementById('kioskApp');
+            app.innerHTML = `
+                <div class="student-card" id="card">
+                    <div class="avatar-circle">${initials}</div>
+                    <h1 class="name">${student.Ism}</h1>
+                    <div class="id-badge">ID: ${student.ID}</div>
+                    <div class="timestamp">${student.time}</div>
+                </div>
+            `;
+            
+            // Trigger animation
+            setTimeout(() => {
+                document.getElementById('card').classList.add('active');
+            }, 50);
+
+            // Reset back to waiting after 10 seconds of no new swiping
+            clearTimeout(window.resetTimer);
+            window.resetTimer = setTimeout(() => {
+                document.getElementById('card').classList.remove('active');
+                setTimeout(() => {
+                    app.innerHTML = `
+                        <div class="waiting-state">
+                            <div class="loader"></div>
+                            <p class="waiting-text">Terminal kutilmoqda...</p>
+                        </div>
+                    `;
+                }, 600);
+                lastId = "";
+                lastTime = "";
+            }, 10000);
+        }
+
+        setInterval(checkUpdate, 1000);
+        checkUpdate();
+    </script>
+</body>
+</html>

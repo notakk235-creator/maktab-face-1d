@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceID Pro — Boshqaruv Paneli</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #050608;
+            --bg-card: rgba(17, 19, 24, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent: #f093fb;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --sidebar-width: 260px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-deep);
+            background-image: radial-gradient(circle at 0% 0%, rgba(79, 172, 254, 0.1) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            border-right: 1px solid var(--border-glass);
+            background: rgba(10, 11, 15, 0.98);
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            z-index: 100;
+        }
+        .logo { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-links { display: flex; flex-direction: column; gap: 8px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px;
+            color: var(--text-muted); text-decoration: none; font-weight: 500; cursor: pointer;
+        }
+        .nav-item:hover { background: rgba(255, 255, 255, 0.03); color: #fff; }
+        .nav-item.active { background: rgba(0, 242, 254, 0.08); color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.2); }
+
+        /* Main Content */
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1 { font-size: 28px; margin-bottom: 25px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 20px; padding: 25px; margin-bottom: 25px; backdrop-filter: blur(20px); }
+        .card-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+        /* Forms */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted); }
+        input { width: 100%; padding: 14px 18px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 12px; color: #fff; outline: none; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 254, 0.1); }
+        .btn { padding: 14px 25px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #000; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:disabled { opacity: 0.5; }
+
+        /* Device Cards */
+        .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .device-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 16px; padding: 15px; position: relative; }
+        .device-status { position: absolute; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; }
+        .online { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .offline { background: var(--error); }
+
+        /* Students Table */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; padding: 15px; color: var(--text-muted); font-size: 13px; font-weight: 500; border-bottom: 1px solid var(--border-glass); }
+        td { padding: 15px; border-bottom: 1px solid var(--border-glass); font-size: 14px; }
+        .photo-box { width: 45px; height: 45px; border-radius: 10px; background: #222; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-box svg { color: #444; }
+
+        /* Notification */
+        #toast { position: fixed; bottom: 30px; right: 30px; padding: 15px 25px; border-radius: 12px; background: #111; border: 1px solid #333; display: none; z-index: 1000; animation: slideUp 0.3s; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
+
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 200; }
+        .modal-content { background: #0f1115; border: 1px solid #333; border-radius: 20px; padding: 30px; width: 400px; text-align: center; }
+        .big-photo { width: 200px; height: 200px; border-radius: 20px; margin: 0 auto 20px; border: 2px solid var(--primary); overflow: hidden; }
+        .big-photo img { width: 100%; height: 100%; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">FaceID Pro</div>
+        <nav class="nav-links">
+            <div class="nav-item active" data-tab="tab-settings">Tizim Sozlamalari</div>
+            <div class="nav-item" data-tab="tab-students">O'quvchilar Bazasi</div>
+            <div class="nav-item" data-tab="tab-devices">Qurilmalar & IP Skan</div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <!-- Sozlamalar -->
+        <div id="tab-settings" class="tab-content active">
+            <h1>Sozlamalar</h1>
+            <div class="card">
+                <div class="card-header">Google Sheets & Telegram</div>
+                <div class="form-group">
+                    <label>Google Jadval Havolasi</label>
+                    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." value="{{ sheet_url }}">
+                </div>
+                <div class="form-group">
+                    <label>Telegram Bot Token</label>
+                    <input type="password" id="tgToken" placeholder="TOKENni kiriting" value="{{ telegram_token }}">
+                </div>
+                <button class="btn" onclick="saveSettings()">Saqlash</button>
+            </div>
+            
+            <div class="card" style="background: rgba(0, 242, 254, 0.05);">
+                <div class="card-header" style="color: var(--primary);">Webhook Manzili</div>
+                <p style="font-size: 14px; color: var(--text-muted);">Ushbu manzilni Hikvision qurilmasining HTTP Listening bo'limiga kiriting:</p>
+                <code style="display: block; background: #000; padding: 12px; border-radius: 8px; margin-top: 10px; color: var(--primary);">{{ request.base_url }}webhook</code>
+            </div>
+        </div>
+
+        <!-- O'quvchilar -->
+        <div id="tab-students" class="tab-content">
+            <h1>O'quvchilar Boshqaruvi</h1>
+            <div class="card">
+                <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 0;">
+                    <input type="text" id="stuSearch" placeholder="Ism yoki ID bo'yicha qidirish..." oninput="fetchStudents()">
+                    <button class="btn" onclick="fetchStudents()">Yangilash</button>
+                </div>
+            </div>
+
+            <div class="card table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="60">Foto</th>
+                            <th>ID</th>
+                            <th>F.I.O</th>
+                            <th>Xabar</th>
+                            <th>Telegram ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stuList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Qurilmalar -->
+        <div id="tab-devices" class="tab-content">
+            <h1>Qurilmalar va Skanerlash</h1>
+            <div class="card">
+                <div class="card-header">IP Skaner</div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px;">
+                    <input type="text" id="ipBase" placeholder="IP bazasi (192.168.1)" value="192.168.1">
+                    <input type="text" id="ipStart" placeholder="Boshlanish" value="1">
+                    <input type="text" id="ipEnd" placeholder="Tugash" value="50">
+                    <button class="btn" id="ipScanBtn" onclick="scanIPRange()">Skanerlash</button>
+                </div>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">*Internetdagi qurilma bo'lsa, to'liq IP manzilni kiriting va start/end ni 1 qilib qoldiring.</p>
+            </div>
+
+            <div id="deviceList" class="device-grid"></div>
+        </div>
+    </main>
+
+    <!-- Photo Modal -->
+    <div id="photoModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalName" style="margin-bottom: 20px;">O'quvchi Rasmi</h3>
+            <div class="big-photo" id="modalPhoto"><img src="" alt=""></div>
+            <input type="file" id="fileInput" style="display: none;" onchange="uploadPhoto()" accept="image/*">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" style="flex:1" onclick="document.getElementById('fileInput').click()">Yangi Rasm</button>
+                <button class="btn" style="flex:1; background: #222; color: #fff;" onclick="closeModal()">Yopish</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Habar</div>
+
+    <script>
+        // Tab system
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                item.classList.add('active');
+                document.getElementById(item.dataset.tab).classList.add('active');
+                if(item.dataset.tab === 'tab-students') fetchStudents();
+            });
+        });
+
+        function showToast(txt, err = false) {
+            const t = document.getElementById('toast');
+            t.textContent = txt;
+            t.style.display = 'block';
+            t.style.borderColor = err ? 'var(--error)' : 'var(--success)';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        async function saveSettings() {
+            const res = await fetch('/save_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sheet_url: document.getElementById('sheetUrl').value,
+                    telegram_token: document.getElementById('tgToken').value
+                })
+            });
+            const data = await res.json();
+            if(data.status === 'success') showToast('Sozlamalar saqlandi!');
+            else showToast(data.message, true);
+        }
+
+        async function fetchStudents() {
+            const q = document.getElementById('stuSearch').value;
+            const res = await fetch(`/api/students?query=${q}`);
+            const data = await res.json();
+            const list = document.getElementById('stuList');
+            if(data.status === 'success') {
+                list.innerHTML = data.students.map(s => `
+                    <tr>
+                        <td>
+                            <div class="photo-box" onclick="openPhotoModal('${s.ID}', '${s.Ism}', '${s.photo || ''}')">
+                                ${s.photo ? `<img src="${s.photo}">` : `<svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>`}
+                            </div>
+                        </td>
+                        <td>${s.ID}</td>
+                        <td style="font-weight: 600;">${s.Ism}</td>
+                        <td style="font-size: 12px; color: var(--text-muted);">${s.Xabar || '-'}</td>
+                        <td style="font-family: monospace;">${s.ChatID || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        let currentStudentId = "";
+        function openPhotoModal(id, name, photo) {
+            currentStudentId = id;
+            document.getElementById('modalName').textContent = name;
+            document.getElementById('modalPhoto').innerHTML = photo ? `<img src="${photo}">` : `Rasm yo'q`;
+            document.getElementById('photoModal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('photoModal').style.display = 'none'; }
+
+        async function uploadPhoto() {
+            const file = document.getElementById('fileInput').files[0];
+            if(!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch(`/api/student/photo/${currentStudentId}`, { method: 'POST', body: fd });
+            const data = await res.json();
+            if(data.status === 'success') {
+                showToast('Rasm yuklandi!');
+                fetchStudents();
+                closeModal();
+            } else showToast(data.message, true);
+        }
+
+        async function scanIPRange() {
+            const btn = document.getElementById('ipScanBtn');
+            btn.disabled = true; btn.textContent = "Skanerlanmoqda...";
+            const base = document.getElementById('ipBase').value;
+            const start = document.getElementById('ipStart').value;
+            const end = document.getElementById('ipEnd').value;
+            const list = document.getElementById('deviceList');
+            list.innerHTML = "";
+
+            try {
+                const res = await fetch('/api/device/scan_range', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ base, start, end })
+                });
+                const data = await res.json();
+                if(data.devices && data.devices.length > 0) {
+                    list.innerHTML = data.devices.map(d => `
+                        <div class="device-card">
+                            <div class="device-status online"></div>
+                            <div style="font-weight: 700; color: var(--primary);">${d.model}</div>
+                            <div style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">IP: ${d.ip}</div>
+                        </div>
+                    `).join('');
+                } else showToast('Hech qanday qurilma topilmadi', true);
+            } catch(e) { showToast('Skanerlashda xatolik', true); }
+            finally { btn.disabled = false; btn.textContent = "Skanerlash"; }
+        }
+    </script>
+</body>
+</html>
